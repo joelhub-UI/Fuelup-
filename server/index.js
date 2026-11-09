@@ -7,7 +7,7 @@ import { Service, isFuel } from './service.js';
 
 const service = new Service(openDb(config.dbPath));
 const publicDir = path.join(config.root, 'public');
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
 
 const httpError = (status, message) => Object.assign(new Error(message), { status });
 

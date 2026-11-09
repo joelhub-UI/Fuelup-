@@ -59,6 +59,12 @@ test/                  Tests: npm test
 API: `GET /api/overview?fuel=e5|e10|diesel`, `POST /api/location`, `POST /api/refresh`, `POST /api/ai`,
 `GET /api/geocode?q=…`, `GET /api/status`.
 
+## Als App auf dem iPhone
+
+FuelUp lässt sich als Web-App auf dem Home-Bildschirm ablegen (eigenes Icon, Vollbild ohne Browserleiste):
+Seite in Safari öffnen → Teilen → „Zum Home-Bildschirm“. Der Server muss dafür vom iPhone aus erreichbar sein,
+siehe Hinweise.
+
 ## Hinweise
 
 - Der Server lauscht standardmäßig nur auf `127.0.0.1`. Für Zugriff vom Handy im Heimnetz `HOST=0.0.0.0` setzen –

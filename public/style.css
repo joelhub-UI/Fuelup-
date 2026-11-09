@@ -134,3 +134,8 @@ summary { cursor: pointer; color: var(--text-2); font-size: 0.85rem; }
 .tooltip .t-title { color: var(--text-2); font-size: 0.78rem; }
 .tooltip strong { margin-right: 6px; }
 .chart svg line, .chart svg path, .chart svg text, .chart svg circle { pointer-events: none; }
+
+/* Als App auf dem Home-Bildschirm: Abstand zu Notch und Home-Indikator */
+.top { padding-top: max(24px, env(safe-area-inset-top)); }
+footer { padding-bottom: max(32px, env(safe-area-inset-bottom)); }
+input, select { font-size: 16px; } /* verhindert das automatische Zoomen in iOS */
