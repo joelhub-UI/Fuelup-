@@ -1,6 +1,7 @@
 # FuelUp
 
-Zeigt die Shell-Tankstellen in deiner Nähe mit Live-Preisen, vergleicht sie untereinander und mit anderen Marken
+Zeigt die Tankstellen in deiner Nähe mit Live-Preisen – wahlweise eine Marke (z. B. Shell, Aral, JET) oder alle –,
+vergleicht sie untereinander und mit den übrigen Marken
 und sagt dir, wann du am besten tankst – auf Basis aktueller und selbst gesammelter historischer Preise,
 ausgewertet per Statistik und per KI (Claude).
 
@@ -26,9 +27,11 @@ Weitere Einstellungen (Port, Abfrageintervall, Modell) stehen in `.env.example`.
 
 ## So funktioniert es
 
-1. **Standort wählen** – per Ort/Postleitzahl oder Browser-Standort, dazu Umkreis (1–25 km) und Kraftstoff.
+1. **Standort und Marke wählen** – per Ort/Postleitzahl oder Browser-Standort, dazu Umkreis (1–25 km), Kraftstoff
+   und Marke. Die Markenliste enthält alle Marken, die im Umkreis vorkommen, plus „Alle Marken“.
 2. **Live-Preise** – der Server fragt die Tankerkönig-API ab (Daten der Markttransparenzstelle für Kraftstoffe)
-   und merkt sich die bis zu 10 nächsten Shell-Stationen sowie bis zu 10 Stationen anderer Marken als Vergleich.
+   und beobachtet die bis zu 40 nächstgelegenen Tankstellen aller Marken. Die gewählte Marke wird ausgewertet,
+   die übrigen dienen als Vergleich; die Marke lässt sich jederzeit wechseln, ohne dass Historie verloren geht.
 3. **Historie** – solange der Server läuft, ruft er alle 10 Minuten die Preise ab und speichert sie in SQLite
    (`data/fuelup.sqlite`, 180 Tage). Die API liefert selbst keine Vergangenheitswerte; die Prognose wird also
    besser, je länger FuelUp läuft. Am besten dauerhaft laufen lassen (z. B. auf einem Raspberry Pi oder kleinen Server).
@@ -56,7 +59,7 @@ public/                Dashboard (HTML, CSS, JavaScript ohne Build-Schritt)
 test/                  Tests: npm test
 ```
 
-API: `GET /api/overview?fuel=e5|e10|diesel`, `POST /api/location`, `POST /api/refresh`, `POST /api/ai`,
+API: `GET /api/overview?fuel=e5|e10|diesel`, `POST /api/location`, `POST /api/brand`, `POST /api/refresh`, `POST /api/ai`,
 `GET /api/geocode?q=…`, `GET /api/status`.
 
 ## Als App auf dem iPhone
@@ -72,4 +75,5 @@ siehe Hinweise.
   Browser nur über `localhost` oder HTTPS.
 - Tankerkönig erlaubt automatische Abfragen höchstens alle 5 Minuten; FuelUp hält das ein.
 - Preisdaten: Tankerkönig, Lizenz CC BY 4.0. Ortssuche: Nominatim / © OpenStreetMap-Mitwirkende.
-- Nur Deutschland. Prognosen sind Schätzungen aus vergangenen Preisen, keine Garantie.
+- Nur Deutschland: Die Preisdaten stammen von der deutschen Markttransparenzstelle. Eine weltweite Quelle für
+  Live-Spritpreise gibt es nicht; andere Länder bräuchten jeweils eine eigene Datenquelle. Prognosen sind Schätzungen aus vergangenen Preisen, keine Garantie.

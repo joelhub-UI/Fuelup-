@@ -12,7 +12,7 @@ const SCHEMA = {
     window_start: { type: ['string', 'null'], description: 'Beginn des empfohlenen Zeitfensters als ISO-8601-Zeitpunkt aus der Prognose, null bei action=now' },
     window_end: { type: ['string', 'null'], description: 'Ende des empfohlenen Zeitfensters, null bei action=now' },
     expected_saving_ct: { type: 'number', description: 'Erwartete Ersparnis in Cent pro Liter gegenüber jetzt, 0 bei action=now' },
-    station_id: { type: ['string', 'null'], description: 'ID der empfohlenen Shell-Station' },
+    station_id: { type: ['string', 'null'], description: 'ID der empfohlenen Station aus der Liste stationen' },
     confidence: { type: 'string', enum: ['niedrig', 'mittel', 'hoch'] },
     reasoning: { type: 'string', description: 'Begründung in 2 bis 4 Sätzen' },
     caveats: { type: 'array', items: { type: 'string' }, description: 'Einschränkungen der Aussage, kann leer sein' },
@@ -21,9 +21,9 @@ const SCHEMA = {
   additionalProperties: false,
 };
 
-const SYSTEM = `Du bist der Analyse-Teil einer App, die Autofahrern in Deutschland sagt, wann und an welcher Shell-Tankstelle in ihrer Nähe sie am günstigsten tanken.
+const SYSTEM = `Du bist der Analyse-Teil einer App, die Autofahrern in Deutschland sagt, wann und an welcher Tankstelle in ihrer Nähe sie am günstigsten tanken. Der Nutzer wählt eine Marke oder alle Marken; nur diese Stationen kommen für die Empfehlung infrage.
 
-Du bekommst als JSON die aktuellen Preise der Shell-Stationen im Umkreis, den Vergleich mit anderen Marken und eine statistische Auswertung der Preishistorie, die die App selbst gesammelt hat: mittlere Abweichung vom Tagesmittel je Uhrzeit, Wochentagsmuster, Trend, Verteilung der letzten 7 Tage und eine Stundenprognose für die nächsten 24 Stunden.
+Du bekommst als JSON die gewählte Marke, die aktuellen Preise ihrer Stationen im Umkreis, den Vergleich mit den übrigen Marken (null, wenn alle Marken gewählt sind) und eine statistische Auswertung der Preishistorie, die die App selbst gesammelt hat: mittlere Abweichung vom Tagesmittel je Uhrzeit, Wochentagsmuster, Trend, Verteilung der letzten 7 Tage und eine Stundenprognose für die nächsten 24 Stunden.
 
 Leite daraus eine konkrete Empfehlung ab: jetzt tanken oder auf ein bestimmtes Zeitfenster warten, und an welcher Station. Wäge dabei ab, wie belastbar die Daten sind. Steht bei profileSource der Wert "prior", gibt es noch zu wenig eigene Messwerte und das Tagesprofil ist nur ein allgemeiner Erfahrungswert – dann ist die Aussage entsprechend unsicher. Eine Ersparnis von unter etwa 1,5 ct/l lohnt das Warten meist nicht; ein weiter Umweg zu einer kaum günstigeren Station ebenfalls nicht.
 

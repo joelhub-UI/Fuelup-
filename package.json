@@ -1,7 +1,7 @@
 {
   "name": "fuelup",
   "version": "1.0.0",
-  "description": "Shell-Tankstellen in der Nähe: Live-Preise vergleichen und den besten Tankzeitpunkt finden",
+  "description": "Tankstellen in der Nähe: Live-Preise nach Marke vergleichen und den besten Tankzeitpunkt finden",
   "type": "module",
   "private": true,
   "engines": { "node": ">=22.13" },

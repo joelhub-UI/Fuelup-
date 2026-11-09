@@ -21,9 +21,9 @@ export const config = {
   timeZone: env.TZ_NAME || 'Europe/Berlin',
   aiEnabled: Boolean(env.ANTHROPIC_API_KEY || env.ANTHROPIC_AUTH_TOKEN),
   aiModel: env.ANTHROPIC_MODEL || 'claude-opus-5-5',
-  brand: 'shell',
-  maxShell: 10,
-  maxOthers: 10,
+  // So viele der nächstgelegenen Tankstellen (alle Marken) werden beobachtet: 10 pro API-Abfrage.
+  maxStations: 40,
+  defaultBrand: 'shell',
 };
 
 export const FUELS = ['e5', 'e10', 'diesel'];

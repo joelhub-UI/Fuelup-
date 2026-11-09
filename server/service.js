@@ -6,7 +6,9 @@ import { aiRecommendation, aiErrorMessage } from './ai.js';
 
 const DAY = 86400;
 const nowTs = () => Math.floor(Date.now() / 1000);
-const isShell = (s) => new RegExp(`\\b${config.brand}\\b`, 'i').test(`${s.brand} ${s.name}`);
+const NO_BRAND = 'ohne-marke';
+/** Einheitlicher Schlüssel für Markennamen (die API liefert z. B. "ARAL" und "Aral"). */
+export const brandKey = (brand) => (brand || '').trim().toLowerCase().replace(/\s+/g, ' ') || NO_BRAND;
 
 export class Service {
   constructor(store) {
@@ -30,12 +32,14 @@ export class Service {
   async setLocation({ lat, lng, rad, label }) {
     const ts = nowTs();
     const found = config.demo ? demoStations({ lat, lng, rad }) : await listStations({ lat, lng, rad });
-    const all = found.map((s) => ({ ...s, isShell: isShell(s) }));
-    const tracked = [
-      ...all.filter((s) => s.isShell).slice(0, config.maxShell),
-      ...all.filter((s) => !s.isShell).slice(0, config.maxOthers),
-    ];
+    const tracked = found.slice(0, config.maxStations); // nach Entfernung sortiert
     this.store.setTrackedStations(tracked);
+    const keys = new Set(tracked.map((s) => brandKey(s.brand)));
+    // Gespeichert wird ein Markenschlüssel oder '*' für alle Marken; null heißt: noch nie gewählt.
+    const current = this.store.getSetting('brand');
+    if (current === null || (current !== '*' && !keys.has(current))) {
+      this.store.setSetting('brand', keys.has(config.defaultBrand) ? config.defaultBrand : '*');
+    }
     this.store.setSetting('location', { lat, lng, rad, label: label || null });
     this.aiCache.clear();
 
@@ -91,11 +95,38 @@ export class Service {
     return setInterval(tick, config.pollMinutes * 60 * 1000);
   }
 
+  /** Marken der beobachteten Stationen, häufigste zuerst. */
+  brands(stations = this.store.trackedStations()) {
+    const map = new Map();
+    for (const s of stations) {
+      const key = brandKey(s.brand);
+      const b = map.get(key) || { key, label: key === NO_BRAND ? 'Freie / ohne Marke' : s.brand.trim(), count: 0 };
+      b.count += 1;
+      map.set(key, b);
+    }
+    return [...map.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'de'));
+  }
+
+  /** brand = Markenschlüssel oder null für alle Marken. */
+  setBrand(brand) {
+    if (brand && !this.brands().some((b) => b.key === brand)) {
+      throw Object.assign(new Error('Diese Marke gibt es im gewählten Umkreis nicht.'), { status: 400 });
+    }
+    this.store.setSetting('brand', brand || '*');
+    this.aiCache.clear();
+  }
+
   overview(fuel) {
     const now = nowTs();
     const stations = this.store.trackedStations();
+    const brands = this.brands(stations);
+    const stored = this.store.getSetting('brand');
+    const brand = stored && stored !== '*' ? stored : null;
+    const inFocus = (b) => !brand || brandKey(b) === brand;
     const latest = new Map(this.store.latestPrices().map((p) => [p.stationId, p]));
-    const analysis = analyze(this.store.priceRows(fuel, now - 60 * DAY), { now, timeZone: config.timeZone });
+    const analysis = analyze(
+      this.store.priceRows(fuel, now - 60 * DAY).map((r) => ({ ...r, isFocus: inFocus(r.brand) })),
+      { now, timeZone: config.timeZone });
 
     const withPrice = stations.map((s) => {
       const p = latest.get(s.id);
@@ -108,14 +139,14 @@ export class Service {
         lat: s.lat,
         lng: s.lng,
         distKm: s.dist,
-        isShell: Boolean(s.is_shell),
+        isFocus: inFocus(s.brand),
         isOpen: fresh ? Boolean(p.isOpen) : null,
         price: fresh && p.isOpen ? p[fuel] : null,
         avgOffsetCt: analysis.stationOffsets[s.id] ?? null,
       };
     });
-    const shell = withPrice.filter((s) => s.isShell);
-    const others = withPrice.filter((s) => !s.isShell && s.price != null);
+    const focus = withPrice.filter((s) => s.isFocus);
+    const others = withPrice.filter((s) => !s.isFocus && s.price != null);
     const cheapestOther = others.reduce((a, b) => (!a || b.price < a.price ? b : a), null);
     const { stationOffsets, ...rest } = analysis;
 
@@ -124,7 +155,10 @@ export class Service {
       now,
       fuel,
       timeZone: config.timeZone,
-      shellStations: shell,
+      brands,
+      brand,
+      brandLabel: brand ? brands.find((b) => b.key === brand)?.label ?? brand : null,
+      stations: focus,
       area: {
         count: others.length,
         avgPrice: others.length ? others.reduce((a, s) => a + s.price, 0) / others.length : null,
@@ -138,7 +172,7 @@ export class Service {
     if (!config.aiEnabled) throw Object.assign(new Error('Kein ANTHROPIC_API_KEY gesetzt.'), { status: 503 });
     const o = this.overview(fuel);
     if (o.analysis.current == null) throw Object.assign(new Error('Es liegen noch keine aktuellen Preise vor.'), { status: 409 });
-    const key = `${fuel}:${o.lastPoll}`;
+    const key = `${fuel}:${o.brand}:${o.lastPoll}`;
     const cached = this.aiCache.get(key);
     if (cached) return cached;
 
@@ -149,8 +183,9 @@ export class Service {
       zeitzone: o.timeZone,
       kraftstoff: fuel,
       preiseInEuroProLiter: true,
-      shellStationen: o.shellStations.map(({ lat, lng, isShell: _, brand, ...s }) => s),
-      andereMarken: {
+      gewaehlteMarke: o.brandLabel ?? 'alle Marken',
+      stationen: o.stations.map(({ lat, lng, isFocus: _, ...s }) => s),
+      andereMarken: o.brand && {
         anzahl: o.area.count,
         durchschnittspreis: o.area.avgPrice,
         guenstigste: o.area.cheapest && { marke: o.area.cheapest.brand, preis: o.area.cheapest.price, distKm: o.area.cheapest.distKm },
@@ -163,7 +198,7 @@ export class Service {
         trendCtProTag: a.trendCtPerDay,
         letzte7Tage: a.weekStats,
       },
-      shellDurchschnittJetzt: a.current,
+      durchschnittGewaehlteStationenJetzt: a.current,
       prognose24h: a.forecast.map((f) => ({ zeit: iso(f.ts), lokaleStunde: f.hour, erwarteterPreis: Math.round(f.expected * 1000) / 1000 })),
       statistischeEmpfehlung: a.recommendation,
     };

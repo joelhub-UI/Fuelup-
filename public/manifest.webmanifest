@@ -1,7 +1,7 @@
 {
   "name": "FuelUp",
   "short_name": "FuelUp",
-  "description": "Shell-Preise vergleichen und zum besten Zeitpunkt tanken",
+  "description": "Spritpreise vergleichen und zum besten Zeitpunkt tanken",
   "lang": "de",
   "start_url": "/",
   "display": "standalone",

@@ -64,6 +64,12 @@ const routes = {
     await service.setLocation({ lat, lng, rad, label: typeof label === 'string' ? label.slice(0, 200) : null });
     return service.overview(fuelParam(url));
   },
+  'POST /api/brand': async (url, req) => {
+    const { brand } = await readJson(req);
+    if (brand != null && typeof brand !== 'string') throw httpError(400, 'Ungültige Marke.');
+    service.setBrand(brand);
+    return service.overview(fuelParam(url));
+  },
   'POST /api/refresh': async (url) => {
     const refreshed = await service.refresh();
     return { refreshed, ...service.overview(fuelParam(url)) };

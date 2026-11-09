@@ -18,22 +18,22 @@ function price(ts, base = 1.8) {
 function rows(days, fn = price, end = NOW) {
   const out = [];
   for (let ts = end - days * 24 * HOUR; ts <= end; ts += HOUR / 2) {
-    out.push({ stationId: 'a', ts, price: fn(ts), isShell: 1 });
-    out.push({ stationId: 'b', ts, price: fn(ts) + 0.02, isShell: 1 });
-    out.push({ stationId: 'x', ts, price: fn(ts) - 0.03, isShell: 0 });
+    out.push({ stationId: 'a', ts, price: fn(ts), isFocus: 1 });
+    out.push({ stationId: 'b', ts, price: fn(ts) + 0.02, isFocus: 1 });
+    out.push({ stationId: 'x', ts, price: fn(ts) - 0.03, isFocus: 0 });
   }
   return out;
 }
 
 test('hourlySeries mittelt Shell und andere Marken getrennt', () => {
   const series = hourlySeries([
-    { stationId: 'a', ts: 7200, price: 1.8, isShell: 1 },
-    { stationId: 'a', ts: 9000, price: 1.9, isShell: 1 },
-    { stationId: 'b', ts: 7300, price: 1.75, isShell: 1 },
-    { stationId: 'x', ts: 7400, price: 1.7, isShell: 0 },
+    { stationId: 'a', ts: 7200, price: 1.8, isFocus: 1 },
+    { stationId: 'a', ts: 9000, price: 1.9, isFocus: 1 },
+    { stationId: 'b', ts: 7300, price: 1.75, isFocus: 1 },
+    { stationId: 'x', ts: 7400, price: 1.7, isFocus: 0 },
   ]);
   assert.equal(series.length, 1);
-  assert.ok(Math.abs(series[0].shell - 1.8) < 1e-9); // (1,85 + 1,75) / 2
+  assert.ok(Math.abs(series[0].focus - 1.8) < 1e-9); // (1,85 + 1,75) / 2
   assert.equal(series[0].area, 1.7);
 });
 
@@ -76,4 +76,12 @@ test('Trend und Wochentagsprofil', () => {
   const a = analyze(rows(20, rising), { now: NOW, timeZone: TZ });
   assert.ok(Math.abs(a.trendCtPerDay - 1) < 0.05);
   assert.equal(a.weekdayProfile.length, 7);
+});
+
+test('ohne Vergleichsgruppe (alle Marken gewählt) bleibt der Vergleichswert leer', () => {
+  const all = rows(5).map((r) => ({ ...r, isFocus: 1 }));
+  const a = analyze(all, { now: NOW, timeZone: TZ });
+  assert.equal(a.currentArea, null);
+  assert.ok(a.series.every((p) => p.area == null));
+  assert.ok(a.current > 0);
 });

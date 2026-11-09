@@ -19,7 +19,7 @@ export const PRIOR_PROFILE_CT = [
 const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
 const round = (x, digits = 1) => (x == null ? null : Math.round(x * 10 ** digits) / 10 ** digits);
 
-/** Fasst Einzelmessungen zu Stundenwerten zusammen (Mittel über Shell- bzw. übrige Stationen). */
+/** Fasst Einzelmessungen zu Stundenwerten zusammen (Mittel über gewählte Marke bzw. übrige Stationen). */
 export function hourlySeries(rows) {
   const buckets = new Map();
   for (const r of rows) {
@@ -27,24 +27,24 @@ export function hourlySeries(rows) {
     let b = buckets.get(key);
     if (!b) buckets.set(key, (b = new Map()));
     let s = b.get(r.stationId);
-    if (!s) b.set(r.stationId, (s = { sum: 0, n: 0, isShell: Boolean(r.isShell) }));
+    if (!s) b.set(r.stationId, (s = { sum: 0, n: 0, isFocus: Boolean(r.isFocus) }));
     s.sum += r.price;
     s.n += 1;
   }
   return [...buckets.entries()]
     .sort((a, b) => a[0] - b[0])
     .map(([key, stations]) => {
-      const shell = [];
+      const focus = [];
       const area = [];
       const byStation = {};
       for (const [id, s] of stations) {
         const avg = s.sum / s.n;
-        (s.isShell ? shell : area).push(avg);
-        if (s.isShell) byStation[id] = avg;
+        (s.isFocus ? focus : area).push(avg);
+        if (s.isFocus) byStation[id] = avg;
       }
       return {
         ts: key * HOUR,
-        shell: shell.length ? mean(shell) : null,
+        focus: focus.length ? mean(focus) : null,
         area: area.length ? mean(area) : null,
         byStation,
       };
@@ -54,11 +54,11 @@ export function hourlySeries(rows) {
 function completeDays(series, timeZone) {
   const days = new Map();
   for (const p of series) {
-    if (p.shell == null) continue;
+    if (p.focus == null) continue;
     const { day, hour, weekday } = localParts(p.ts, timeZone);
     let d = days.get(day);
     if (!d) days.set(day, (d = { day, weekday, ts: p.ts, points: [] }));
-    d.points.push({ hour, price: p.shell });
+    d.points.push({ hour, price: p.focus });
   }
   return [...days.values()]
     .filter((d) => d.points.length >= MIN_HOURS_PER_DAY)
@@ -104,8 +104,8 @@ function trendCtPerDay(days) {
 function stationOffsets(series, now) {
   const acc = {};
   for (const p of series) {
-    if (p.ts < now - 14 * DAY || p.shell == null) continue;
-    for (const [id, price] of Object.entries(p.byStation)) (acc[id] ||= []).push((price - p.shell) * 100);
+    if (p.ts < now - 14 * DAY || p.focus == null) continue;
+    for (const [id, price] of Object.entries(p.byStation)) (acc[id] ||= []).push((price - p.focus) * 100);
   }
   const out = {};
   for (const [id, xs] of Object.entries(acc)) if (xs.length >= 12) out[id] = round(mean(xs), 1);
@@ -147,7 +147,7 @@ function bestWindow(fc) {
 }
 
 /**
- * @param rows  Messwerte [{ stationId, ts, price, isShell }] für eine Kraftstoffsorte
+ * @param rows  Messwerte [{ stationId, ts, price, isFocus }] für eine Kraftstoffsorte
  * @param opts  { now (Unix-Sekunden), timeZone }
  */
 export function analyze(rows, { now, timeZone }) {
@@ -158,12 +158,12 @@ export function analyze(rows, { now, timeZone }) {
     ? hourProfile(days)
     : PRIOR_PROFILE_CT.map((devCt, hour) => ({ hour, devCt, n: 0 }));
 
-  const shellPoints = series.filter((p) => p.shell != null);
-  const last = shellPoints.at(-1);
-  const current = last && now - last.ts <= 2 * HOUR ? last.shell : null;
+  const focusPoints = series.filter((p) => p.focus != null);
+  const last = focusPoints.at(-1);
+  const current = last && now - last.ts <= 2 * HOUR ? last.focus : null;
   const currentArea = last && last.area != null && current != null ? last.area : null;
 
-  const week = shellPoints.filter((p) => p.ts >= now - 7 * DAY).map((p) => p.shell);
+  const week = focusPoints.filter((p) => p.ts >= now - 7 * DAY).map((p) => p.focus);
   const weekStats = week.length >= 24
     ? {
         min: Math.min(...week),
@@ -189,7 +189,7 @@ export function analyze(rows, { now, timeZone }) {
     forecast: fc,
     window,
     stationOffsets: stationOffsets(series, now),
-    series: series.map(({ ts, shell, area }) => ({ ts, shell: round(shell, 4), area: round(area, 4) })),
+    series: series.map(({ ts, focus, area }) => ({ ts, focus: round(focus, 4), area: round(area, 4) })),
   };
   analysis.recommendation = recommend(analysis);
   return analysis;

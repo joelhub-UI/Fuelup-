@@ -42,17 +42,17 @@ class Store {
   /** Ersetzt die beobachteten Stationen; die Preishistorie alter Stationen bleibt erhalten. */
   setTrackedStations(stations) {
     const upsert = this.db.prepare(`
-      INSERT INTO stations (id, name, brand, street, house_number, post_code, place, lat, lng, dist, is_shell, tracked)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+      INSERT INTO stations (id, name, brand, street, house_number, post_code, place, lat, lng, dist, tracked)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
       ON CONFLICT(id) DO UPDATE SET name = excluded.name, brand = excluded.brand, street = excluded.street,
         house_number = excluded.house_number, post_code = excluded.post_code, place = excluded.place,
-        lat = excluded.lat, lng = excluded.lng, dist = excluded.dist, is_shell = excluded.is_shell, tracked = 1`);
+        lat = excluded.lat, lng = excluded.lng, dist = excluded.dist, tracked = 1`);
     this.db.exec('BEGIN');
     try {
       this.db.exec('UPDATE stations SET tracked = 0');
       for (const s of stations) {
         upsert.run(s.id, s.name ?? '', s.brand ?? '', s.street ?? '', s.houseNumber ?? '', String(s.postCode ?? ''),
-          s.place ?? '', s.lat, s.lng, s.dist ?? null, s.isShell ? 1 : 0);
+          s.place ?? '', s.lat, s.lng, s.dist ?? null);
       }
       this.db.exec('COMMIT');
     } catch (err) {
@@ -84,7 +84,7 @@ class Store {
   /** Preisverlauf der beobachteten Stationen seit `sinceTs` für eine Kraftstoffsorte. */
   priceRows(fuel, sinceTs) {
     return this.db.prepare(`
-      SELECT p.station_id AS stationId, p.ts, p.${fuel} AS price, s.is_shell AS isShell
+      SELECT p.station_id AS stationId, p.ts, p.${fuel} AS price, s.brand
       FROM prices p JOIN stations s ON s.id = p.station_id
       WHERE s.tracked = 1 AND p.ts >= ? AND p.${fuel} IS NOT NULL
       ORDER BY p.ts`).all(sinceTs);
