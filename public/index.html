@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FuelUp – Shell-Preise &amp; bester Tankzeitpunkt</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <h1>FuelUp</h1>
+    <p class="tagline">Shell-Tankstellen in deiner Nähe – Preise vergleichen, zum besten Zeitpunkt tanken</p>
+  </header>
+
+  <main>
+    <p id="demo-banner" class="banner" hidden>
+      <strong>Demo-Modus:</strong> Es ist kein Tankerkönig-API-Key hinterlegt. Alle Tankstellen und Preise auf dieser
+      Seite sind simuliert. Für echte Live-Preise <code>TANKERKOENIG_API_KEY</code> in der Datei <code>.env</code> eintragen.
+    </p>
+    <p id="error" class="banner error" role="alert" hidden></p>
+
+    <section class="card controls" aria-label="Standort und Kraftstoff">
+      <form id="search-form" class="row">
+        <label class="grow">Ort oder Postleitzahl
+          <input id="q" type="search" placeholder="z. B. 50667 Köln" autocomplete="postal-code">
+        </label>
+        <label>Umkreis
+          <select id="rad">
+            <option value="2">2 km</option><option value="5" selected>5 km</option>
+            <option value="10">10 km</option><option value="15">15 km</option><option value="25">25 km</option>
+          </select>
+        </label>
+        <button type="submit" class="primary">Suchen</button>
+        <button type="button" id="locate">Mein Standort</button>
+      </form>
+      <ul id="geo-results" class="geo-results" hidden></ul>
+      <div class="row between">
+        <div class="segmented" role="group" aria-label="Kraftstoff">
+          <button type="button" data-fuel="e5" aria-pressed="true">Super E5</button>
+          <button type="button" data-fuel="e10" aria-pressed="false">Super E10</button>
+          <button type="button" data-fuel="diesel" aria-pressed="false">Diesel</button>
+        </div>
+        <p id="location-label" class="muted"></p>
+      </div>
+    </section>
+
+    <p id="empty" class="card muted" hidden>
+      Wähle zuerst einen Standort – über die Suche oder „Mein Standort“. Danach sammelt FuelUp laufend die Preise
+      der Shell-Stationen im Umkreis und lernt daraus den besten Tankzeitpunkt.
+    </p>
+
+    <div id="content" hidden>
+      <section class="card reco" aria-live="polite">
+        <p class="eyebrow">Empfehlung</p>
+        <h2 id="reco-headline"></h2>
+        <div class="tiles" id="reco-tiles"></div>
+        <ul id="reco-reasons" class="reasons"></ul>
+        <div id="ai-box" class="ai-box">
+          <div class="row between">
+            <p class="eyebrow">KI-Analyse</p>
+            <button type="button" id="ai-run" class="primary">KI-Analyse starten</button>
+          </div>
+          <p id="ai-hint" class="muted"></p>
+          <div id="ai-result" hidden>
+            <h3 id="ai-headline"></h3>
+            <p id="ai-reasoning"></p>
+            <ul id="ai-caveats" class="reasons"></ul>
+            <p id="ai-meta" class="muted small"></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="row between">
+          <h2>Shell-Stationen im Umkreis</h2>
+          <button type="button" id="refresh">Preise aktualisieren</button>
+        </div>
+        <div class="table-wrap"><table id="stations"></table></div>
+        <p id="area" class="muted"></p>
+      </section>
+
+      <section class="card">
+        <div class="row between">
+          <h2>Preisverlauf</h2>
+          <div class="segmented" role="group" aria-label="Zeitraum">
+            <button type="button" data-range="2" aria-pressed="false">48 Std.</button>
+            <button type="button" data-range="7" aria-pressed="true">7 Tage</button>
+            <button type="button" data-range="30" aria-pressed="false">30 Tage</button>
+          </div>
+        </div>
+        <p class="muted small">Durchschnittspreis je Stunde in Euro pro Liter</p>
+        <div id="legend" class="legend"></div>
+        <div id="chart-history" class="chart"></div>
+        <details><summary>Als Tabelle anzeigen</summary><div class="table-wrap"><table id="table-history"></table></div></details>
+      </section>
+
+      <section class="card">
+        <h2>Typischer Tagesverlauf bei Shell</h2>
+        <p id="profile-note" class="muted small"></p>
+        <div id="chart-profile" class="chart"></div>
+        <details><summary>Als Tabelle anzeigen</summary><div class="table-wrap"><table id="table-profile"></table></div></details>
+        <p id="weekday-note" class="muted"></p>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <p id="updated" class="muted small"></p>
+    <p class="muted small">Preisdaten: <a href="https://creativecommons.tankerkoenig.de" rel="noopener">Tankerkönig</a>
+      (CC BY 4.0), Quelle: Markttransparenzstelle für Kraftstoffe. Ortssuche: © OpenStreetMap-Mitwirkende.
+      Alle Angaben ohne Gewähr – Prognosen sind Schätzungen.</p>
+  </footer>
+  <div id="tooltip" class="tooltip" hidden></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

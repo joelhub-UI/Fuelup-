@@ -1,0 +1,15 @@
+{
+  "name": "fuelup",
+  "version": "1.0.0",
+  "description": "Shell-Tankstellen in der Nähe: Live-Preise vergleichen und den besten Tankzeitpunkt finden",
+  "type": "module",
+  "private": true,
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env server/index.js",
+    "test": "node --disable-warning=ExperimentalWarning --test"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.7.0"
+  }
+}
