@@ -4,6 +4,16 @@ import path from 'node:path';
 import { config } from './config.js';
 import { openDb } from './db.js';
 import { Service, isFuel } from './service.js';
+import { Auth, Limiter, isHttps, sameOrigin, securityHeaders } from './auth.js';
+
+if (config.production && config.appPassword.length < 12) {
+  console.error('Im Internet-Betrieb (NODE_ENV=production) muss APP_PASSWORD gesetzt sein und mindestens 12 Zeichen haben.');
+  process.exit(1);
+}
+const auth = new Auth(config.appPassword);
+const aiLimiter = new Limiter(config.aiDailyLimit, 86400 * 1000);
+const geocodeLimiter = new Limiter(30, 60 * 1000);
+const PUBLIC_API = new Set(['POST /api/login', 'GET /api/session']);
 
 const service = new Service(openDb(config.dbPath));
 const publicDir = path.join(config.root, 'public');
@@ -11,8 +21,8 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
 
 const httpError = (status, message) => Object.assign(new Error(message), { status });
 
-function send(res, status, body) {
-  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+function send(res, status, body, extra = {}) {
+  res.writeHead(status, { ...extra, 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
   res.end(JSON.stringify(body));
 }
 
@@ -49,12 +59,31 @@ async function geocode(q) {
   return (await res.json()).map((r) => ({ label: r.display_name, lat: Number(r.lat), lng: Number(r.lon) }));
 }
 
+function clientIp(req) {
+  const forwarded = config.trustProxy && req.headers['x-forwarded-for'];
+  return forwarded ? forwarded.split(',')[0].trim() : req.socket.remoteAddress;
+}
+
 const routes = {
+  'GET /api/session': (url, req) => ({ authRequired: auth.enabled, authenticated: auth.isAuthenticated(req) }),
+  'POST /api/login': async (url, req, res) => {
+    const { password } = await readJson(req);
+    const result = auth.login(password, clientIp(req));
+    if (result === 'locked') throw httpError(429, 'Zu viele Fehlversuche – bitte in 15 Minuten erneut versuchen.');
+    if (result === 'wrong') throw httpError(401, 'Falsches Passwort.');
+    res.setHeader('Set-Cookie', auth.cookie(auth.createToken(), isHttps(req)));
+    return { ok: true };
+  },
+  'POST /api/logout': (url, req, res) => {
+    res.setHeader('Set-Cookie', auth.cookie('', isHttps(req)));
+    return { ok: true };
+  },
   'GET /api/status': () => service.status(),
   'GET /api/overview': (url) => service.overview(fuelParam(url)),
   'GET /api/geocode': (url) => {
     const q = (url.searchParams.get('q') || '').trim();
     if (q.length < 2 || q.length > 120) throw httpError(400, 'Bitte einen Ort oder eine Postleitzahl eingeben.');
+    if (!geocodeLimiter.take()) throw httpError(429, 'Zu viele Ortssuchen – bitte kurz warten.');
     return geocode(q);
   },
   'POST /api/location': async (url, req) => {
@@ -74,10 +103,15 @@ const routes = {
     const refreshed = await service.refresh();
     return { refreshed, ...service.overview(fuelParam(url)) };
   },
-  'POST /api/ai': (url) => service.ai(fuelParam(url)),
+  'POST /api/ai': (url) => {
+    const fuel = fuelParam(url);
+    // Zwischengespeicherte Ergebnisse kosten nichts und zählen nicht gegen das Tageslimit.
+    if (!service.aiCached(fuel) && !aiLimiter.take()) throw httpError(429, `Das Tageslimit von ${config.aiDailyLimit} KI-Analysen ist erreicht.`);
+    return service.ai(fuel);
+  },
 };
 
-async function serveStatic(pathname, res) {
+async function serveStatic(pathname, res, headers) {
   const rel = pathname === '/' ? 'index.html' : pathname.slice(1);
   const file = path.join(publicDir, rel);
   if (!file.startsWith(publicDir + path.sep)) throw httpError(404, 'Nicht gefunden.');
@@ -87,22 +121,35 @@ async function serveStatic(pathname, res) {
   } catch {
     throw httpError(404, 'Nicht gefunden.');
   }
-  res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
+  res.writeHead(200, { ...headers, 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
   res.end(data);
 }
 
 const server = http.createServer(async (req, res) => {
+  const headers = securityHeaders(req);
   try {
     const url = new URL(req.url, 'http://localhost');
-    const route = routes[`${req.method} ${url.pathname}`];
-    if (route) return send(res, 200, await route(url, req));
+    const name = `${req.method} ${url.pathname}`;
+    if (name === 'GET /healthz') return send(res, 200, { ok: true }, headers);
+    if (req.method !== 'GET' && !sameOrigin(req)) throw httpError(403, 'Anfrage von fremder Seite abgelehnt.');
+    const authed = auth.isAuthenticated(req);
+    const route = routes[name];
+    if (route) {
+      if (!authed && !PUBLIC_API.has(name)) throw httpError(401, 'Bitte anmelden.');
+      return send(res, 200, await route(url, req, res), headers);
+    }
     if (url.pathname.startsWith('/api/')) throw httpError(404, 'Nicht gefunden.');
     if (req.method !== 'GET') throw httpError(405, 'Methode nicht erlaubt.');
-    await serveStatic(decodeURIComponent(url.pathname), res);
+    // Die Seite selbst gibt es nur nach Anmeldung; Anmeldeseite, Stylesheet und Icons sind öffentlich.
+    if (!authed && (url.pathname === '/' || url.pathname === '/index.html')) {
+      res.writeHead(302, { ...headers, Location: '/login.html' });
+      return res.end();
+    }
+    await serveStatic(decodeURIComponent(url.pathname), res, headers);
   } catch (err) {
     const status = err.status || (err.message.startsWith('Tankerkönig') ? 502 : 500);
     if (status === 500) console.error(err);
-    send(res, status, { error: status === 500 ? 'Interner Fehler.' : err.message });
+    send(res, status, { error: status === 500 ? 'Interner Fehler.' : err.message }, headers);
   }
 });
 
@@ -112,5 +159,6 @@ server.listen(config.port, config.host, () => {
   console.log(config.demo
     ? 'Demo-Modus: kein TANKERKOENIG_API_KEY gesetzt – es werden simulierte Preise angezeigt.'
     : `Live-Preise über Tankerkönig, Abfrage alle ${config.pollMinutes} Minuten.`);
+  console.log(auth.enabled ? 'Passwortschutz aktiv.' : 'Kein Passwortschutz (APP_PASSWORD nicht gesetzt) – nur für den Betrieb im eigenen Netz geeignet.');
   console.log(config.aiEnabled ? `KI-Analyse aktiv (${config.aiModel}).` : 'KI-Analyse aus: kein ANTHROPIC_API_KEY gesetzt.');
 });

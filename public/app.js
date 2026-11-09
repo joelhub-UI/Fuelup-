@@ -24,6 +24,11 @@ export function h(tag, props = {}, ...children) {
   for (const c of children.flat()) if (c != null) el.append(c);
   return el;
 }
+function key(color) {
+  const el = h('span', { class: 'key' });
+  el.style.borderColor = color; // per Skript gesetzt, damit die Content-Security-Policy keine Inline-Styles braucht
+  return el;
+}
 const eur = (v, digits = 3) => (v == null ? '–' : `${v.toFixed(digits).replace('.', ',')} €`);
 const ct = (v, sign = false) => (v == null ? '–' : `${sign && v > 0 ? '+' : ''}${v.toFixed(1).replace('.', ',').replace('-', '−')} ct`);
 const km = (v) => (v == null ? '–' : `${v.toFixed(1).replace('.', ',')} km`);
@@ -39,6 +44,10 @@ async function api(path, options) {
     throw new Error('Der FuelUp-Server ist nicht erreichbar.');
   }
   const body = await res.json().catch(() => ({}));
+  if (res.status === 401) {
+    location.href = '/login.html';
+    throw new Error('Bitte anmelden.');
+  }
   if (!res.ok) throw new Error(body.error || `Fehler ${res.status}`);
   return body;
 }
@@ -158,7 +167,7 @@ function renderCharts(d) {
     { key: 'focus', label: d.brandLabel || 'Alle Marken', color: 'var(--series-1)' },
     { key: 'area', label: 'Andere Marken', color: 'var(--series-2)' },
   ].filter((s) => points.some((p) => p[s.key] != null));
-  $('legend').replaceChildren(...series.map((s) => h('span', {}, h('span', { class: 'key', style: `border-color:${s.color}` }), s.label)));
+  $('legend').replaceChildren(...series.map((s) => h('span', {}, key(s.color), s.label)));
   lineChart($('chart-history'), { points, series, timeZone: d.timeZone, days: state.range, format: eur });
   $('table-history').replaceChildren(
     h('thead', {}, h('tr', {}, h('th', { text: 'Zeit' }), series.map((s) => h('th', { class: 'num', text: s.label })))),
@@ -209,6 +218,7 @@ function render() {
   renderReco(d);
   renderStations(d);
   renderCharts(d);
+  $('logout').hidden = !d.authRequired;
   $('updated').textContent = (d.lastPoll ? `Letzte Preisabfrage: ${dayTime(d.lastPoll)} Uhr · automatische Abfrage alle ${d.pollMinutes} Minuten.` : '')
     + (d.lastPollError ? ` Letzter Abruf fehlgeschlagen: ${d.lastPollError}` : '');
 }
@@ -293,6 +303,11 @@ $('ai-run').addEventListener('click', (e) => busy(e.currentTarget, async () => {
     render();
   }
 }));
+
+$('logout').addEventListener('click', async () => {
+  await api('/api/logout', { method: 'POST' }).catch(() => {});
+  location.href = '/login.html';
+});
 
 let resizeTimer;
 window.addEventListener('resize', () => {

@@ -200,3 +200,7 @@ summary { cursor: pointer; color: var(--text-2); font-size: 0.8rem; letter-spaci
   html { scroll-behavior: auto; }
   .card, button { transition: none; }
 }
+
+/* ---------- Anmeldung ---------- */
+.login { max-width: 420px; padding-top: 12vh; }
+.login label { margin-bottom: 12px; }

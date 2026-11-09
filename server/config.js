@@ -6,11 +6,19 @@ const env = process.env;
 
 const tankerkoenigKey = (env.TANKERKOENIG_API_KEY || '').trim();
 const demo = !tankerkoenigKey;
+const production = env.NODE_ENV === 'production';
 
 export const config = {
   root,
   port: Number(env.PORT) || 3000,
-  host: env.HOST || '127.0.0.1',
+  host: env.HOST || (production ? '0.0.0.0' : '127.0.0.1'),
+  production,
+  // Passwort für den Zugriff; im Internet-Betrieb (NODE_ENV=production) Pflicht.
+  appPassword: env.APP_PASSWORD || '',
+  // Obergrenze für kostenpflichtige KI-Analysen pro Tag
+  aiDailyLimit: Number(env.AI_DAILY_LIMIT) || 30,
+  // Nur setzen, wenn ein Proxy des Hosters davorsteht, der X-Forwarded-For selbst setzt
+  trustProxy: env.TRUST_PROXY === '1',
   tankerkoenigKey,
   tankerkoenigBase: env.TANKERKOENIG_BASE_URL || 'https://creativecommons.tankerkoenig.de/json',
   demo,

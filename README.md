@@ -54,6 +54,7 @@ server/tankerkoenig.js Client für die Tankerkönig-API
 server/analysis.js     Statistik, Prognose und regelbasierte Empfehlung
 server/ai.js           Claude-Anbindung (strukturierte JSON-Antwort)
 server/demo.js         Simulierte Daten für den Demo-Modus
+server/auth.js         Passwortschutz, Limits, Sicherheits-Header
 server/db.js           SQLite-Speicher (node:sqlite)
 public/                Dashboard (HTML, CSS, JavaScript ohne Build-Schritt)
 test/                  Tests: npm test
@@ -68,10 +69,52 @@ FuelUp lässt sich als Web-App auf dem Home-Bildschirm ablegen (eigenes Icon, Vo
 Seite in Safari öffnen → Teilen → „Zum Home-Bildschirm“. Der Server muss dafür vom iPhone aus erreichbar sein,
 siehe Hinweise.
 
+## Im Internet hosten
+
+Die App braucht einen Anbieter, der einen **dauerhaft laufenden Container** mit **dauerhaftem Speicher** bietet
+(z. B. Railway, Fly.io, Render oder ein eigener kleiner Server mit Docker). Reine „Serverless“-Angebote passen
+nicht, weil die App durchgehend Preise sammelt und in eine Datei schreibt.
+
+1. Beim Anbieter ein neues Projekt aus diesem GitHub-Repository anlegen; das `Dockerfile` wird automatisch erkannt.
+2. Diese Umgebungsvariablen (oft „Secrets“ genannt) setzen – nicht ins Repository schreiben:
+
+   | Variable | Wert |
+   |---|---|
+   | `APP_PASSWORD` | ein langes, zufälliges Passwort (mindestens 12 Zeichen) – ohne startet die App nicht |
+   | `TANKERKOENIG_API_KEY` | dein Tankerkönig-Key |
+   | `ANTHROPIC_API_KEY` | dein Claude-Key (optional) |
+   | `TRUST_PROXY` | `1` |
+
+3. Ein dauerhaftes Volume am Pfad `/app/data` einhängen – dort liegt die Preishistorie.
+4. Die App lauscht auf Port 3000 (`PORT` anpassbar); Zustandsprüfung unter `/healthz`.
+5. Die vom Anbieter vergebene `https://…`-Adresse öffnen, anmelden, auf dem iPhone zum Home-Bildschirm hinzufügen.
+
+Auf einem eigenen Server:
+
+```bash
+docker build -t fuelup .
+docker run -d --restart unless-stopped -p 127.0.0.1:3000:3000 -v fuelup-data:/app/data --env-file .env fuelup
+```
+
+Davor gehört ein Reverse-Proxy mit HTTPS (z. B. Caddy), der auf `127.0.0.1:3000` weiterleitet.
+
+Was die App zur Absicherung mitbringt:
+
+- **Anmeldung** mit einem Passwort; die Sitzung liegt in einem signierten Cookie (`HttpOnly`, `SameSite=Lax`,
+  über HTTPS `Secure`), gültig 30 Tage. Ein neues Passwort meldet alle Geräte ab.
+- **Bremse gegen Durchprobieren:** nach 8 Fehlversuchen je Adresse (60 insgesamt) 15 Minuten Sperre.
+- **Kostenbremse:** höchstens `AI_DAILY_LIMIT` (Standard 30) KI-Analysen pro Tag.
+- **Browser-Schutz:** strenge Content-Security-Policy, kein Einbetten in fremde Seiten, HSTS über HTTPS,
+  schreibende Anfragen nur von der eigenen Adresse.
+- Die API-Keys bleiben auf dem Server und werden nie an den Browser geschickt.
+
+Grenzen: Es gibt nur ein gemeinsames Passwort, keine Benutzerkonten. HTTPS liefert der Anbieter bzw. der
+Reverse-Proxy, nicht die App selbst.
+
 ## Hinweise
 
 - Der Server lauscht standardmäßig nur auf `127.0.0.1`. Für Zugriff vom Handy im Heimnetz `HOST=0.0.0.0` setzen –
-  die App hat keine Anmeldung, also nicht ungeschützt ins Internet stellen. „Mein Standort“ funktioniert im
+  dann am besten auch `APP_PASSWORD` setzen. „Mein Standort“ funktioniert im
   Browser nur über `localhost` oder HTTPS.
 - Tankerkönig erlaubt automatische Abfragen höchstens alle 5 Minuten; FuelUp hält das ein.
 - Preisdaten: Tankerkönig, Lizenz CC BY 4.0. Ortssuche: Nominatim / © OpenStreetMap-Mitwirkende.

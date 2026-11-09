@@ -20,6 +20,7 @@ export class Service {
   status() {
     return {
       demo: config.demo,
+      authRequired: Boolean(config.appPassword),
       aiEnabled: config.aiEnabled,
       aiModel: config.aiModel,
       pollMinutes: config.pollMinutes,
@@ -166,6 +167,12 @@ export class Service {
       },
       analysis: rest,
     };
+  }
+
+  aiCached(fuel) {
+    const o = this.status();
+    const stored = this.store.getSetting('brand');
+    return this.aiCache.has(`${fuel}:${stored && stored !== '*' ? stored : null}:${o.lastPoll}`);
   }
 
   async ai(fuel) {
