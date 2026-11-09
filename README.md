@@ -89,7 +89,26 @@ nicht, weil die App durchgehend Preise sammelt und in eine Datei schreibt.
 4. Die App lauscht auf Port 3000 (`PORT` anpassbar); Zustandsprüfung unter `/healthz`.
 5. Die vom Anbieter vergebene `https://…`-Adresse öffnen, anmelden, auf dem iPhone zum Home-Bildschirm hinzufügen.
 
-Auf einem eigenen Server:
+### Railway
+
+Das Repository enthält eine fertige `railway.json` (Build per `Dockerfile`, Zustandsprüfung `/healthz`,
+automatischer Neustart, eine Instanz).
+
+1. Auf [railway.com](https://railway.com) anmelden → **New Project** → **Deploy from GitHub repo** → dieses
+   Repository wählen (Branch `main`).
+2. Im Dienst unter **Variables** die vier Variablen aus der Tabelle oben anlegen.
+3. Ein **Volume** an den Dienst hängen, Mount-Pfad `/app/data`.
+4. Unter **Settings → Networking** eine öffentliche Adresse erzeugen (**Generate Domain**). Fragt Railway nach
+   dem Port: Er steht im Deploy-Log in der Zeile „FuelUp läuft auf …“.
+5. Die `https://…up.railway.app`-Adresse öffnen und mit `APP_PASSWORD` anmelden.
+
+Wichtig: nur **eine** Instanz betreiben (mehrere würden die Tankerkönig-API mehrfach abfragen und können sich
+das Volume nicht teilen), und den Dienst nicht schlafen legen lassen („Serverless“/App Sleeping aus), sonst
+entstehen Lücken in der Preishistorie.
+
+### Eigener Server
+
+
 
 ```bash
 docker build -t fuelup .
