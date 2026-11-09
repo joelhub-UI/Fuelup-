@@ -102,6 +102,11 @@ automatischer Neustart, eine Instanz).
    dem Port: Er steht im Deploy-Log in der Zeile „FuelUp läuft auf …“.
 5. Die `https://…up.railway.app`-Adresse öffnen und mit `APP_PASSWORD` anmelden.
 
+Danach läuft alles automatisch: Jede Änderung, die in `main` landet, baut und startet Railway von selbst neu.
+Auf GitHub prüft der Workflow `.github/workflows/ci.yml` bei jedem Pull Request und jedem Push nach `main`
+die Tests und baut und startet das Docker-Image. Mit der Railway-Einstellung **Wait for CI** (unter den
+Deploy-Einstellungen des Dienstes) wird nur ausgerollt, was diese Prüfungen bestanden hat.
+
 Wichtig: nur **eine** Instanz betreiben (mehrere würden die Tankerkönig-API mehrfach abfragen und können sich
 das Volume nicht teilen), und den Dienst nicht schlafen legen lassen („Serverless“/App Sleeping aus), sonst
 entstehen Lücken in der Preishistorie.
