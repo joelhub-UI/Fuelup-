@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#1f5fb0">
+  <meta name="theme-color" content="#0b0b0d">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="FuelUp">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -15,9 +15,15 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="top">
-    <h1>FuelUp</h1>
-    <p class="tagline">Shell-Tankstellen in deiner Nähe – Preise vergleichen, zum besten Zeitpunkt tanken</p>
+  <header class="statusbar">
+    <a class="brand" href="#" aria-label="FuelUp – nach oben"><span class="brand-mark" aria-hidden="true"></span><h1>FuelUp</h1></a>
+    <nav aria-label="Bereiche">
+      <a href="#sec-reco">Empfehlung</a>
+      <a href="#sec-stations">Stationen</a>
+      <a href="#sec-history">Verlauf</a>
+      <a href="#sec-profile">Tagesprofil</a>
+    </nav>
+    <time id="clock" class="clock"></time>
   </header>
 
   <main>
@@ -58,7 +64,7 @@
     </p>
 
     <div id="content" hidden>
-      <section class="card reco" aria-live="polite">
+      <section id="sec-reco" class="card reco" aria-live="polite">
         <p class="eyebrow">Empfehlung</p>
         <h2 id="reco-headline"></h2>
         <div class="tiles" id="reco-tiles"></div>
@@ -78,7 +84,7 @@
         </div>
       </section>
 
-      <section class="card">
+      <section id="sec-stations" class="card">
         <div class="row between">
           <h2>Shell-Stationen im Umkreis</h2>
           <button type="button" id="refresh">Preise aktualisieren</button>
@@ -87,7 +93,7 @@
         <p id="area" class="muted"></p>
       </section>
 
-      <section class="card">
+      <section id="sec-history" class="card">
         <div class="row between">
           <h2>Preisverlauf</h2>
           <div class="segmented" role="group" aria-label="Zeitraum">
@@ -102,7 +108,7 @@
         <details><summary>Als Tabelle anzeigen</summary><div class="table-wrap"><table id="table-history"></table></div></details>
       </section>
 
-      <section class="card">
+      <section id="sec-profile" class="card">
         <h2>Typischer Tagesverlauf bei Shell</h2>
         <p id="profile-note" class="muted small"></p>
         <div id="chart-profile" class="chart"></div>

@@ -129,7 +129,7 @@ function renderStations(d) {
       h('tbody', {}, sorted.map((s) => h('tr', { class: s === best ? 'best' : '' },
         h('td', {}, s.name, s === best ? h('span', { class: 'badge', text: 'günstigste' }) : null,
           s.isOpen === false ? h('span', { class: 'badge', text: 'geschlossen' }) : null,
-          h('span', { class: 'sub', text: s.address })),
+          h('span', { class: 'sub' }, h('span', { class: 'only-mobile', text: `${km(s.distKm)} · ` }), s.address)),
         h('td', { class: 'num', text: km(s.distKm) }),
         h('td', { class: 'num price', text: eur(s.price) }),
         h('td', { class: 'num', text: s.price == null || s === best ? '–' : ct((s.price - best.price) * 100, true) }),
@@ -284,3 +284,7 @@ window.addEventListener('resize', () => {
 });
 setInterval(() => load().catch(() => {}), 5 * 60 * 1000);
 load().catch((err) => showError(err.message));
+
+const tick = () => ($('clock').textContent = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' }).format(new Date()));
+tick();
+setInterval(tick, 15000);
