@@ -1,4 +1,5 @@
 import { lineChart, barChart } from './charts.js';
+import { renderMap } from './map.js';
 
 const $ = (id) => document.getElementById(id);
 const FUEL_NAMES = { e5: 'Super E5', e10: 'Super E10', diesel: 'Diesel' };
@@ -104,7 +105,7 @@ function renderReco(d) {
   $('ai-run').textContent = ai ? 'KI-Analyse erneuern' : 'KI-Analyse starten';
   $('ai-hint').textContent = d.aiEnabled
     ? (ai ? '' : 'Claude bewertet aktuelle Preise, Historie und Prognose und begründet die Empfehlung.')
-    : 'Nicht aktiv: Für die KI-Analyse ANTHROPIC_API_KEY in der Datei .env eintragen. Die Empfehlung oben beruht auf der statistischen Auswertung.';
+    : 'Nicht aktiv: Für die KI-Analyse die Variable ANTHROPIC_API_KEY setzen – beim Hosting in den Variablen des Anbieters, auf dem eigenen Rechner in der Datei .env. Die Empfehlung oben beruht auf der statistischen Auswertung.';
   $('ai-result').hidden = !ai;
   if (ai) {
     const station = d.stations.find((s) => s.id === ai.station_id);
@@ -115,6 +116,7 @@ function renderReco(d) {
     if (ai.window_start && ai.window_end) parts.push(`Zeitfenster: ${dayTime(Date.parse(ai.window_start) / 1000)} – ${time(Date.parse(ai.window_end) / 1000)} Uhr`);
     if (ai.expected_saving_ct > 0) parts.push(`Ersparnis: ca. ${ct(ai.expected_saving_ct)}/l`);
     if (station) parts.push(`Station: ${station.name}`);
+    if (ai.demo) parts.unshift('Beruht auf simulierten Demo-Daten, nicht auf echten Preisen');
     parts.push(`Verlässlichkeit: ${ai.confidence}`, `erstellt ${time(ai.generatedAt)} Uhr mit ${ai.model}`);
     $('ai-meta').textContent = parts.join(' · ');
   }
@@ -217,6 +219,10 @@ function render() {
   $('location-label').textContent = `Standort: ${d.location.label || `${d.location.lat.toFixed(4)}, ${d.location.lng.toFixed(4)}`} · ${d.location.rad} km`;
   renderReco(d);
   renderStations(d);
+  $('map-note').textContent = `Aktueller Preis für ${FUEL_NAMES[d.fuel]} in Euro pro Liter. `
+    + (d.brand ? `Rot: ${d.brandLabel}, grau: andere Marken. ` : '')
+    + 'Die günstigste Station ist weiß hervorgehoben; Antippen zeigt Details und Route.';
+  renderMap($('map'), d, { fuelName: FUEL_NAMES[d.fuel], eur, km });
   renderCharts(d);
   $('logout').hidden = !d.authRequired;
   $('updated').textContent = (d.lastPoll ? `Letzte Preisabfrage: ${dayTime(d.lastPoll)} Uhr · automatische Abfrage alle ${d.pollMinutes} Minuten.` : '')

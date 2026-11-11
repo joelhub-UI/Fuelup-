@@ -27,6 +27,8 @@ Du bekommst als JSON die gewählte Marke, die aktuellen Preise ihrer Stationen i
 
 Leite daraus eine konkrete Empfehlung ab: jetzt tanken oder auf ein bestimmtes Zeitfenster warten, und an welcher Station. Wäge dabei ab, wie belastbar die Daten sind. Steht bei profileSource der Wert "prior", gibt es noch zu wenig eigene Messwerte und das Tagesprofil ist nur ein allgemeiner Erfahrungswert – dann ist die Aussage entsprechend unsicher. Eine Ersparnis von unter etwa 1,5 ct/l lohnt das Warten meist nicht; ein weiter Umweg zu einer kaum günstigeren Station ebenfalls nicht.
 
+Steht bei datenquelle, dass die Daten simuliert sind, läuft die App im Demo-Modus: Dann sind Stationen, Preise und Historie erfunden. Sprich in diesem Fall nicht von eigenen Messwerten und nenne als erste Einschränkung, dass die Empfehlung auf simulierten Demo-Daten beruht.
+
 Stütze dich ausschließlich auf die gelieferten Zahlen und erfinde keine Preise, Ereignisse oder Marktnachrichten. Zeitfenster entnimmst du den Zeitpunkten der Prognose. Schreibe auf Deutsch, sachlich und knapp, für jemanden, der die Antwort auf dem Handy liest. Preise mit Komma als Dezimaltrennzeichen.`;
 
 let client;

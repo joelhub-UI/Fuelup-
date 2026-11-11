@@ -85,7 +85,7 @@ h3 { margin: 8px 0 4px; font-size: 1.1rem; font-weight: 600; }
 @media (min-width: 1000px) {
   #content { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: stretch; margin-bottom: 16px; }
   #content > .card { margin: 0; min-width: 0; }
-  #sec-reco, #sec-stations { grid-column: 1 / -1; }
+  #sec-reco, #sec-stations, #sec-map { grid-column: 1 / -1; }
 }
 
 /* ---------- Bedienelemente ---------- */
@@ -204,3 +204,31 @@ summary { cursor: pointer; color: var(--text-2); font-size: 0.8rem; letter-spaci
 /* ---------- Anmeldung ---------- */
 .login { max-width: 420px; padding-top: 12vh; }
 .login label { margin-bottom: 12px; }
+
+/* ---------- Preiskarte ---------- */
+.map { height: min(60vh, 460px); min-height: 320px; border: 1px solid var(--border); border-radius: 2px; background: #0f1013; z-index: 0; }
+/* Helle OpenStreetMap-Kacheln für das dunkle Design umfärben */
+.map .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.6); }
+.map .leaflet-container, .map.leaflet-container { background: #0f1013; font: inherit; }
+.map-price {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: 0.02em;
+  border-radius: 3px; border: 2px solid var(--surface); box-shadow: 0 2px 8px rgb(0 0 0 / 0.6);
+}
+.map-price.focus { background: var(--accent); color: #fff; }
+.map-price.other { background: #3a3d45; color: #e4e5e8; }
+.map-price.best { background: #fff; color: #0b0b0d; border-color: var(--accent-bright); box-shadow: 0 0 0 2px var(--accent-bright), 0 0 16px rgb(255 42 60 / 0.7); }
+.map-price.none { opacity: 0.75; }
+.map-me { background: #3987e5; border: 3px solid #fff; border-radius: 50%; box-shadow: 0 0 0 4px rgb(57 135 229 / 0.35); }
+.map-radius { stroke: var(--accent-bright); stroke-width: 1.5; stroke-dasharray: 6 6; fill: var(--accent); fill-opacity: 0.05; }
+.map .leaflet-popup-content-wrapper, .map .leaflet-popup-tip { background: #0d0d10; color: var(--text); border-radius: 2px; box-shadow: 0 6px 18px rgb(0 0 0 / 0.7); }
+.map .leaflet-popup-content-wrapper { border-top: 2px solid var(--accent-bright); }
+.map .leaflet-popup-content { margin: 10px 14px; font-size: 0.9rem; line-height: 1.4; }
+.map-popup .sub { color: var(--text-2); font-size: 0.82rem; }
+.map-popup-price { font-size: 1.1rem; font-weight: 600; margin: 4px 0; }
+.map .leaflet-container a.leaflet-popup-close-button { color: var(--text-2); }
+.map .leaflet-control-attribution { background: rgb(13 13 16 / 0.8); color: var(--text-2); }
+.map .leaflet-control-attribution a { color: var(--text-2); }
+.map .leaflet-bar a { background: #1b1c21; color: var(--text); border-bottom-color: var(--border); }
+.map .leaflet-bar a:hover { background: #2a2c33; }
+.map .leaflet-container .map-popup a { color: var(--accent-bright); }
