@@ -140,7 +140,9 @@ Reverse-Proxy, nicht die App selbst.
 - Der Server lauscht standardmäßig nur auf `127.0.0.1`. Für Zugriff vom Handy im Heimnetz `HOST=0.0.0.0` setzen –
   dann am besten auch `APP_PASSWORD` setzen. „Mein Standort“ funktioniert im
   Browser nur über `localhost` oder HTTPS.
-- Tankerkönig erlaubt automatische Abfragen höchstens alle 5 Minuten; FuelUp hält das ein.
+- Tankerkönig erlaubt höchstens eine Abfrage pro Minute je API-Key und automatische Abfragen höchstens alle
+  5 Minuten. FuelUp hält beides ein: Pro Abfrage passen 10 Stationen, ein vollständiger Abruf von 40 Stationen
+  verteilt sich deshalb über gut drei Minuten.
 - Preisdaten: Tankerkönig, Lizenz CC BY 4.0. Ortssuche: Nominatim / © OpenStreetMap-Mitwirkende.
 - Nur Deutschland: Die Preisdaten stammen von der deutschen Markttransparenzstelle. Eine weltweite Quelle für
   Live-Spritpreise gibt es nicht; andere Länder bräuchten jeweils eine eigene Datenquelle. Prognosen sind Schätzungen aus vergangenen Preisen, keine Garantie.

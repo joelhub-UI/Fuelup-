@@ -297,7 +297,12 @@ $('refresh').addEventListener('click', (e) => busy(e.currentTarget, async () => 
   const d = await api(`/api/refresh?fuel=${state.fuel}`, { method: 'POST' });
   state.data = d;
   render();
-  if (!d.refreshed) showError('Die Preise wurden vor weniger als 5 Minuten abgerufen – häufiger erlaubt die Tankerkönig-API keine Abfragen.');
+  const note = {
+    recent: 'Die Preise wurden vor weniger als 5 Minuten abgerufen – so aktuell sind sie schon.',
+    started: 'Der Abruf läuft. Tankerkönig erlaubt nur eine Abfrage pro Minute, deshalb dauert es einige Minuten, bis alle Preise aktualisiert sind.',
+    running: 'Ein Abruf läuft bereits – die Preise erscheinen in wenigen Minuten.',
+  }[d.refreshed];
+  if (note) showError(note);
 }));
 
 $('ai-run').addEventListener('click', (e) => busy(e.currentTarget, async () => {

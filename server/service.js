@@ -81,12 +81,18 @@ export class Service {
     }
   }
 
-  /** Manuelle Aktualisierung – respektiert das 5-Minuten-Limit der Tankerkönig-API. */
+  /** Manuelle Aktualisierung – höchstens alle 5 Minuten. @returns 'done' | 'started' | 'running' | 'recent' */
   async refresh() {
     const last = this.store.getSetting('lastPoll') || 0;
-    if (!config.demo && nowTs() - last < 300) return false;
-    await this.poll();
-    return true;
+    if (config.demo) {
+      await this.poll();
+      return 'done';
+    }
+    if (this.polling) return 'running';
+    if (nowTs() - last < 300) return 'recent';
+    // Der Abruf dauert wegen der Ratenbegrenzung mehrere Minuten und läuft deshalb im Hintergrund.
+    this.poll().catch((err) => console.error(`[refresh] ${err.message}`));
+    return 'started';
   }
 
   startCollector() {

@@ -4,9 +4,11 @@ import http from 'node:http';
 
 // Fake-Server mit dem dokumentierten Antwortformat der Tankerkönig-API
 const seen = [];
+const times = [];
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
   seen.push(url);
+  times.push(Date.now());
   const json = (body) => res.end(JSON.stringify(body));
   if (url.searchParams.get('apikey') !== 'test-key') return json({ ok: false, message: 'apikey nicht angegeben, falsch, oder im falschen Format' });
   if (url.pathname === '/json/list.php') {
@@ -27,8 +29,9 @@ const server = http.createServer((req, res) => {
 });
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
 process.env.TANKERKOENIG_API_KEY = 'test-key';
+process.env.TANKERKOENIG_MIN_GAP_MS = '200';
 process.env.TANKERKOENIG_BASE_URL = `http://127.0.0.1:${server.address().port}/json`;
-const { listStations, fetchPrices } = await import('../server/tankerkoenig.js');
+const { listStations, fetchPrices, resetRateLimit } = await import('../server/tankerkoenig.js');
 const { config } = await import('../server/config.js');
 test.after(() => server.close());
 
@@ -43,9 +46,11 @@ test('listStations liest Umkreissuche und normalisiert Preise', async () => {
 
 test('fetchPrices teilt in Zehnergruppen und behandelt geschlossene Stationen', async () => {
   seen.length = 0;
+  times.length = 0;
   const ids = [...Array.from({ length: 10 }, (_, i) => `id${i}`), 'closed', 'none'];
   const prices = await fetchPrices(ids);
   assert.equal(seen.length, 2);
+  assert.ok(times[1] - times[0] >= 190, `Abstand zwischen den Abfragen: ${times[1] - times[0]} ms`);
   assert.equal(prices.length, 11); // "no prices" wird ausgelassen
   assert.deepEqual(prices[0], { stationId: 'id0', isOpen: true, e5: 1.799, e10: 1.739, diesel: null });
   assert.deepEqual(prices.at(-1), { stationId: 'closed', isOpen: false, e5: null, e10: null, diesel: null });
@@ -55,4 +60,18 @@ test('API-Fehler werden als verständliche Meldung weitergegeben', async () => {
   config.tankerkoenigKey = 'falsch';
   await assert.rejects(listStations({ lat: 1, lng: 1, rad: 1 }), /Tankerkönig: apikey/);
   config.tankerkoenigKey = 'test-key';
+});
+
+test('Ratenbegrenzung: Umkreissuche bricht bei langer Wartezeit verständlich ab, Hintergrundabruf wartet', async () => {
+  resetRateLimit();
+  config.tankerkoenigMinGapMs = 60_000;
+  await listStations({ lat: 1, lng: 1, rad: 1 }); // erste Abfrage sofort
+  await assert.rejects(listStations({ lat: 1, lng: 1, rad: 1 }), (err) => err.status === 429 && /eine Abfrage pro Minute/.test(err.message));
+  // Eine abgelehnte Abfrage darf keinen Platz belegen: nach Ablauf der Minute geht es sofort weiter.
+  resetRateLimit();
+  config.tankerkoenigMinGapMs = 200;
+  const start = Date.now();
+  await fetchPrices(['a']);
+  await fetchPrices(['b']);
+  assert.ok(Date.now() - start >= 190);
 });
