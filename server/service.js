@@ -186,6 +186,7 @@ export class Service {
     const a = o.analysis;
     const iso = (ts) => new Date(ts * 1000).toISOString();
     const payload = {
+      datenquelle: config.demo ? 'simulierte Demo-Daten (keine echten Preise)' : 'Tankerkönig-Livepreise und selbst gesammelte Historie',
       jetzt: iso(o.now),
       zeitzone: o.timeZone,
       kraftstoff: fuel,
@@ -210,7 +211,7 @@ export class Service {
       statistischeEmpfehlung: a.recommendation,
     };
     try {
-      const result = { ...(await aiRecommendation(payload)), generatedAt: nowTs() };
+      const result = { ...(await aiRecommendation(payload)), demo: config.demo, generatedAt: nowTs() };
       this.aiCache.clear();
       this.aiCache.set(key, result);
       return result;
