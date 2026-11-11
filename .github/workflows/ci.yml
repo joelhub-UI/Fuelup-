@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  docker:
+    name: Docker-Image bauen und starten
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Image bauen
+        run: docker build -t fuelup .
+      - name: Container im Demo-Modus mit Daten-Volume starten
+        run: |
+          docker run -d --name fuelup -p 3000:3000 -v fuelup-data:/app/data \
+            -e APP_PASSWORD=ci-test-password-123 fuelup
+          for i in $(seq 1 30); do
+            curl -fs http://localhost:3000/healthz > /dev/null && exit 0
+            sleep 1
+          done
+          echo "Die App ist nicht gestartet." && exit 1
+      - name: App läuft ohne root-Rechte
+        run: test "$(docker exec fuelup stat -c %U /proc/1)" = "node"
+      - name: Ohne Anmeldung gesperrt
+        run: |
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/)" = "302"
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/api/overview)" = "401"
+      - name: Anmelden, Standort setzen, Daten ins Volume schreiben
+        run: |
+          curl -fs -c jar -X POST http://localhost:3000/api/login \
+            -H 'Content-Type: application/json' -d '{"password":"ci-test-password-123"}'
+          curl -fs -b jar -X POST 'http://localhost:3000/api/location?fuel=e5' \
+            -H 'Content-Type: application/json' -d '{"lat":50.94,"lng":6.96,"rad":5,"label":"CI"}' > overview.json
+          node -e "const d=JSON.parse(require('fs').readFileSync('overview.json'));if(!d.stations.length||d.analysis.current==null)process.exit(1)"
+          docker exec fuelup test -s /app/data/demo.sqlite
+      - name: Historie übersteht einen Neustart
+        run: |
+          docker restart fuelup
+          for i in $(seq 1 30); do curl -fs http://localhost:3000/healthz > /dev/null && break; sleep 1; done
+          curl -fs -b jar 'http://localhost:3000/api/overview?fuel=e5' > overview.json
+          node -e "const d=JSON.parse(require('fs').readFileSync('overview.json'));if(!d.location||d.analysis.dataDays<3)process.exit(1)"
+      - name: Container-Log bei Fehler
+        if: failure()
+        run: docker logs fuelup
