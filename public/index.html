@@ -12,6 +12,7 @@
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <title>FuelUp – Spritpreise &amp; bester Tankzeitpunkt</title>
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -20,6 +21,7 @@
     <nav aria-label="Bereiche">
       <a href="#sec-reco">Empfehlung</a>
       <a href="#sec-stations">Stationen</a>
+      <a href="#sec-map">Karte</a>
       <a href="#sec-history">Verlauf</a>
       <a href="#sec-profile">Tagesprofil</a>
     </nav>
@@ -97,6 +99,12 @@
         <p id="area" class="muted"></p>
       </section>
 
+      <section id="sec-map" class="card">
+        <h2>Preiskarte</h2>
+        <p id="map-note" class="muted small"></p>
+        <div id="map" class="map" role="application" aria-label="Karte der Tankstellen mit aktuellen Preisen; dieselben Werte stehen in der Tabelle darüber."></div>
+      </section>
+
       <section id="sec-history" class="card">
         <div class="row between">
           <h2>Preisverlauf</h2>
@@ -126,10 +134,11 @@
     <p id="updated" class="muted small"></p>
     <p><button type="button" id="logout" hidden>Abmelden</button></p>
     <p class="muted small">Preisdaten: <a href="https://creativecommons.tankerkoenig.de" rel="noopener">Tankerkönig</a>
-      (CC BY 4.0), Quelle: Markttransparenzstelle für Kraftstoffe. Ortssuche: © OpenStreetMap-Mitwirkende.
+      (CC BY 4.0), Quelle: Markttransparenzstelle für Kraftstoffe. Karte und Ortssuche: © OpenStreetMap-Mitwirkende.
       Alle Angaben ohne Gewähr – Prognosen sind Schätzungen.</p>
   </footer>
   <div id="tooltip" class="tooltip" hidden></div>
+  <script src="vendor/leaflet/leaflet.js"></script>
   <script type="module" src="app.js"></script>
 </body>
 </html>

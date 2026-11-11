@@ -160,6 +160,7 @@ export class Service {
       brand,
       brandLabel: brand ? brands.find((b) => b.key === brand)?.label ?? brand : null,
       stations: focus,
+      allStations: withPrice,
       area: {
         count: others.length,
         avgPrice: others.length ? others.reduce((a, s) => a + s.price, 0) / others.length : null,

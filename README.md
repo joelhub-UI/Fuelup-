@@ -56,7 +56,7 @@ server/ai.js           Claude-Anbindung (strukturierte JSON-Antwort)
 server/demo.js         Simulierte Daten für den Demo-Modus
 server/auth.js         Passwortschutz, Limits, Sicherheits-Header
 server/db.js           SQLite-Speicher (node:sqlite)
-public/                Dashboard (HTML, CSS, JavaScript ohne Build-Schritt)
+public/                Dashboard (HTML, CSS, JavaScript ohne Build-Schritt), Karte mit Leaflet (public/vendor)
 test/                  Tests: npm test
 ```
 

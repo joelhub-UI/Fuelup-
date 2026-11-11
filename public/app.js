@@ -1,4 +1,5 @@
 import { lineChart, barChart } from './charts.js';
+import { renderMap } from './map.js';
 
 const $ = (id) => document.getElementById(id);
 const FUEL_NAMES = { e5: 'Super E5', e10: 'Super E10', diesel: 'Diesel' };
@@ -218,6 +219,10 @@ function render() {
   $('location-label').textContent = `Standort: ${d.location.label || `${d.location.lat.toFixed(4)}, ${d.location.lng.toFixed(4)}`} · ${d.location.rad} km`;
   renderReco(d);
   renderStations(d);
+  $('map-note').textContent = `Aktueller Preis für ${FUEL_NAMES[d.fuel]} in Euro pro Liter. `
+    + (d.brand ? `Rot: ${d.brandLabel}, grau: andere Marken. ` : '')
+    + 'Die günstigste Station ist weiß hervorgehoben; Antippen zeigt Details und Route.';
+  renderMap($('map'), d, { fuelName: FUEL_NAMES[d.fuel], eur, km });
   renderCharts(d);
   $('logout').hidden = !d.authRequired;
   $('updated').textContent = (d.lastPoll ? `Letzte Preisabfrage: ${dayTime(d.lastPoll)} Uhr · automatische Abfrage alle ${d.pollMinutes} Minuten.` : '')
