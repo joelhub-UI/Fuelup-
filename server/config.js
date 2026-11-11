@@ -26,6 +26,8 @@ export const config = {
   dbPath: env.DB_PATH || path.join(root, 'data', demo ? 'demo.sqlite' : 'fuelup.sqlite'),
   // Tankerkönig erlaubt automatische Abfragen höchstens alle 5 Minuten.
   pollMinutes: Math.max(5, Number(env.POLL_MINUTES) || 10),
+  // Tankerkönig erlaubt höchstens eine Abfrage pro Minute je API-Key; etwas Puffer gegen Uhrenabweichung.
+  tankerkoenigMinGapMs: Number(env.TANKERKOENIG_MIN_GAP_MS) || 61_000,
   timeZone: env.TZ_NAME || 'Europe/Berlin',
   aiEnabled: Boolean(env.ANTHROPIC_API_KEY || env.ANTHROPIC_AUTH_TOKEN),
   aiModel: env.ANTHROPIC_MODEL || 'claude-opus-5-5',

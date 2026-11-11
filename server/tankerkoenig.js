@@ -2,7 +2,31 @@
 // für Kraftstoffe, Lizenz CC BY 4.0) – https://creativecommons.tankerkoenig.de
 import { config } from './config.js';
 
-async function call(endpoint, params) {
+// Ratenbegrenzung: zwischen zwei Abfragen liegt mindestens config.tankerkoenigMinGapMs.
+// Hintergrundabrufe warten auf ihren Platz; Abfragen, auf die ein Mensch wartet, brechen
+// bei längerer Wartezeit mit einer verständlichen Meldung ab.
+const MAX_INTERACTIVE_WAIT_MS = 15_000;
+let nextFree = 0;
+
+async function slot(interactive) {
+  const now = Date.now();
+  const delay = Math.max(0, nextFree - now);
+  if (interactive && delay > MAX_INTERACTIVE_WAIT_MS) {
+    throw Object.assign(
+      new Error(`Tankerkönig erlaubt nur eine Abfrage pro Minute – bitte in ${Math.ceil(delay / 1000)} Sekunden erneut versuchen.`),
+      { status: 429 });
+  }
+  nextFree = Math.max(now, nextFree) + config.tankerkoenigMinGapMs; // Platz sofort reservieren
+  if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
+}
+
+/** Nur für Tests. */
+export function resetRateLimit() {
+  nextFree = 0;
+}
+
+async function call(endpoint, params, { interactive = false } = {}) {
+  await slot(interactive);
   const url = new URL(`${config.tankerkoenigBase}/${endpoint}`);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, String(v));
   url.searchParams.set('apikey', config.tankerkoenigKey);
@@ -26,7 +50,7 @@ const price = (v) => (typeof v === 'number' && v > 0 ? v : null);
 
 /** Umkreissuche: alle Tankstellen mit aktuellen Preisen, nach Entfernung sortiert. */
 export async function listStations({ lat, lng, rad }) {
-  const body = await call('list.php', { lat, lng, rad, sort: 'dist', type: 'all' });
+  const body = await call('list.php', { lat, lng, rad, sort: 'dist', type: 'all' }, { interactive: true });
   return (body.stations || []).map((s) => ({
     id: s.id,
     name: s.name,
@@ -45,7 +69,10 @@ export async function listStations({ lat, lng, rad }) {
   }));
 }
 
-/** Aktuelle Preise für bekannte Stationen (max. 10 IDs pro Abfrage). */
+/**
+ * Aktuelle Preise für bekannte Stationen (max. 10 IDs pro Abfrage). Bei mehr als 10 Stationen
+ * dauert der Abruf wegen der Ratenbegrenzung entsprechend viele Minuten.
+ */
 export async function fetchPrices(ids) {
   const out = [];
   for (let i = 0; i < ids.length; i += 10) {
